@@ -34,6 +34,12 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - id: orig-path
+      shell: pwsh
+      run: |
+        "path=$Env:PATH"
+        "path=$Env:PATH" >>$Env:GITHUB_OUTPUT
+
     # The cache naming scheme means every run of this action should have a
     # different name.  That means there will always be a "cache miss", because
     # the name will never match a previous run.  That's good: we can still get
@@ -148,6 +154,8 @@ runs:
         }
 
     - if: steps.refresh-cache.outputs.update_package_cache != ''
+      env:
+        PATH: ${{ steps.orig-path.outputs.path }}
       uses: actions/cache/save@v3.2.0
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
