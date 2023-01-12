@@ -10,7 +10,6 @@ jobs:
   # can see how long it takes to install without the cache.
   install-without-cache:
     runs-on: windows-latest
-    needs: clear-caches
     steps:
       - name: Checkout
         uses: actions/checkout@v3
