@@ -37,8 +37,11 @@ runs:
     - id: orig-path
       shell: pwsh
       run: |
-        "path=$Env:PATH"
-        "path=$Env:PATH" >>$Env:GITHUB_OUTPUT
+        if (-not (Test-Path -Path C:\_pre-cygwin-install-path.txt)) {
+          "::debug::Storing PATH from prior to Cygwin installation"
+          "$Env:PATH" >C:\_pre-cygwin-install-path.txt
+        }
+        "path=$(Get-Content -Path C:\_pre-cygwin-install-path.txt)" >>$Env:GITHUB_OUTPUT
 
     # The cache naming scheme means every run of this action should have a
     # different name.  That means there will always be a "cache miss", because
