@@ -18,15 +18,15 @@ Please fix my terrible cargo-cult PowerShell.
 Parameters
 ----------
 
-| Input         | Default                                      | Description
-| ------------- | -------------------------------------------- | -----------
-| platform      | x86_64                                       | Install the x86 or x86\_64 version of Cygwin.
-| packages      | *none*                                       | List of additional packages to install.
-| install-dir   | C:\cygwin                                    | Installation directory
-| site          | http://mirrors.kernel.org/sourceware/cygwin/ | Mirror site to install from
-| check-sig     | true                                         | Whether to check the setup.ini signature
-| add-to-path   | true                                         | Whether to add Cygwin's `/bin` directory to the system `PATH`
-| package-cache | disabled                                     | Whether to cache the package downloads
+| Input       | Default                                      | Description
+| ----------- | -------------------------------------------- | -----------
+| platform    | x86_64                                       | Install the x86 or x86\_64 version of Cygwin.
+| packages    | *none*                                       | List of additional packages to install.
+| install-dir | C:\cygwin                                    | Installation directory
+| site        | http://mirrors.kernel.org/sourceware/cygwin/ | Mirror site to install from
+| check-sig   | true                                         | Whether to check the setup.ini signature
+| add-to-path | true                                         | Whether to add Cygwin's `/bin` directory to the system `PATH`
+| cache       | disabled                                     | Whether to cache the package downloads
 
 Line endings
 ------------
@@ -91,8 +91,8 @@ Caching
 
 If you're likely to do regular builds, you might want to store the packages
 locally rather than needing to download them from the Cygwin mirrors on every
-build.  Set `package-cache` to `enabled` and the action will use [GitHub's
-dependency caching][0] to store downloaded package files between runs.
+build.  Set `cache` to `enabled` and the action will use [GitHub's dependency
+caching][0] to store downloaded package files between runs.
 
 [0]: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
 
@@ -103,10 +103,10 @@ packages, and will download new packages if the cached ones are out of date
 
 In certain circumstances you might want to ignore any existing caches but still
 store a new one, or restore a cache but not write one.  Do this by setting
-`package-cache` to `saveonly` or `restoreonly` as appropriate.  This is
-particularly useful when calling the action multiple times in the same run,
-where you probably want to restore the cache the first time the action is
-called, then save it the last time it is called.
+`cache` to `saveonly` or `restoreonly` as appropriate.  This is particularly
+useful when calling the action multiple times in the same run, where you
+probably want to restore the cache the first time the action is called, then
+save it the last time it is called.
 
 You should make sure to clear these caches every so often.  This action, like
 the underlying Cygwin installer, doesn't remove old package files from its

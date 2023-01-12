@@ -2,20 +2,101 @@ name: Caching tests
 
 on: [push, pull_request]
 
-# Ensure there's only a single version of this running in any repo, so one set
-# of tests won't create or destroy caches that interfere with another run.
-concurrency: caches
-
 jobs:
-  clear-caches:
-    uses: ./.github/workflows/clear-caches.yml
-    permissions:
-      actions: write
+  bad-cache-arg:
+    name: Ensure bad cache arguments cause failures
 
-  test-caching:
     runs-on: windows-latest
 
-    needs: clear-caches
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Fail to install Cygwin
+        uses: ./
+        with:
+          cache: bad-argument
+        continue-on-error: true
+
+      # The install step should have failed due to the bad `cache` argument.
+      # Check there's no C:\cygwin directory.
+      - name: Check Cygwin not installed
+        shell: pwsh
+        run: |
+          if (Test-Path -Path C:\cygwin) {
+            Write-Output "::error::Unexpectedly found Cygwin installation"
+            exit 1
+          }
+
+  # This test validates assumptions made by other tests, notably that if we
+  # install one package, we won't find the other installed, so we can use each
+  # of these packages as a flag to check when the cache has and hasn't been
+  # updated.
+  validate-dependencies:
+    name: Ensure there's no unexpected package interdependencies
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        package:
+          - cygwin  # Check base installation doesn't add anything unexpected
+          - afio
+          - arc
+          - argon2
+          - ascii
+          - autossh
+          - balance
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Cygwin
+        uses: ./
+        with:
+          packages: ${{ matrix.package }}
+          # Can't use caches here: saving them gives no value, while restoring
+          # them might pick up packages we don't want.
+          cache: disabled
+
+      - name: Check what's installed
+        shell: bash --noprofile --norc -e -o pipefail -o igncr {0}
+        run: |
+          for package in afio arc argon2 ascii autossh balance; do
+            echo "::debug::Checking for $package"
+            if [[ "$package" = '${{ matrix.package }}' ]]; then
+              if ! cygcheck -cd "$package" | grep -q "^$package "; then
+                echo "::error::Didn't find $package installed"
+                exit 1
+              fi
+              found_file=
+              for file in /cygdrive/c/cygwin-packages/*/*/*/*/"$package"-*.tar.*; do
+                if [[ -f "$file" ]]; then
+                  echo "::debug::Found $package in package cache"
+                  found_file=Yes
+                  break
+                fi
+              done
+              if [[ -z "$found_file" ]]; then
+                echo "::error::Didn't find $package in download cache"
+              fi
+            else
+              if cygcheck -cd "$package" | grep -q "^$package "; then
+                echo "::error::Found $package installed alongside ${{ matrix.package }}"
+                exit 1
+              fi
+              found_file=
+              for file in /cygdrive/c/cygwin-packages/*/*/*/*/"$package"-*.tar.*; do
+                if [[ -f "$file" ]]; then
+                  echo "::error::Found $package in package cache alongside ${{ matrix.package }}"
+                  exit 1
+                fi
+              done
+            fi
+          done
+
+  test-cache-options:
+    name: Test the different cache enabling options
+    runs-on: windows-latest
 
     # Ordering is important here to ensure the correct things are in the
     # correct caches at the correct times.
@@ -36,138 +117,267 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install Cygwin + bash_completion, no caching
+      # The first Cygwin installation step here must be a "saveonly" step.
+      # This means any subsequent steps in this job will pick up a cache
+      # created earlier in this job, rather than a cache from a different job.
+      - name: Install Cygwin + afio, cache saveonly
         uses: ./
         with:
-          packages: bash-completion
-          package-cache: disabled
+          packages: afio
+          cache: saveonly
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
 
-      - name: Install Cygwin + brotli, with caching
+      - name: Install Cygwin + arc, cache enabled
         uses: ./
         with:
-          packages: brotli
-          package-cache: enabled
+          packages: arc
+          cache: enabled
 
-      # This assumes 6 and tests 1
-      - name: Ensure bash-completion not downloaded
+      # This tests 3 + 6
+      - name: Ensure afio downloaded
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/bash-completion-*.tar.*; do
-            [[ -f "$file" ]] && exit 1
-          done
-          exit 0
-
-      - name: Delete the Cygwin installation and downloaded packages
-        run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
-
-      - name: Install Cygwin + libyajl2, with caching
-        uses: ./
-        with:
-          packages: libyajl2
-          package-cache: enabled
-
-      # This tests 2 and 6
-      - name: Ensure brotli downloaded
-        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
-        run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/brotli-*.tar.*; do
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/afio-*.tar.*; do
             [[ -f "$file" ]] && exit 0
           done
           exit 1
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
 
-      - name: Install Cygwin + mksh, saveonly
+      - name: Install Cygwin + argon2, cache restoreonly
         uses: ./
         with:
-          packages: mksh
-          package-cache: saveonly
+          packages: argon2
+          cache: restoreonly
 
-      # This assumes 2 and tests 7
-      - name: Ensure libyajl2 not downloaded
+      # This tests 2 + 8
+      - name: Ensure arc downloaded
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/libyajl2-*.tar.*; do
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/arc-*.tar.*; do
+            [[ -f "$file" ]] && exit 0
+          done
+          exit 1
+
+      - name: Delete the Cygwin installation and downloaded packages
+        run: |
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
+
+      - name: Install Cygwin + ascii, cache enabled
+        uses: ./
+        with:
+          packages: ascii
+          cache: enabled
+
+      # This assumes 6 and proves 4
+      - name: Ensure argon2 not downloaded
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        run: |
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/argon2-*.tar.*; do
             [[ -f "$file" ]] && exit 1
           done
           exit 0
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
 
-      - name: Install Cygwin + libgif7, restoreonly
+      - name: Install Cygwin + autossh, cache saveonly
         uses: ./
         with:
-          packages: libgif7
-          package-cache: restoreonly
+          packages: autossh
+          cache: saveonly
 
-      # This tests 3 and 8
-      - name: Ensure mksh downloaded
+      # This assumes 2 and proves 7
+      - name: Ensure ascii not downloaded
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/mksh-*.tar.*; do
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/ascii-*.tar.*; do
             [[ -f "$file" ]] && exit 1
           done
           exit 0
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
 
-      - name: Install Cygwin, restoreonly
+      - name: Install Cygwin + balance, cache disabled
         uses: ./
         with:
-          package-cache: restoreonly
+          packages: balance
+          cache: disabled
 
-      # This assumes 8 and tests 4
-      - name: Ensure libgif7 not downloaded
+      # This assumes 3 and proves 5
+      - name: Ensure autossh not downloaded
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/libgif7-*.tar.*; do
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/autossh-*.tar.*; do
             [[ -f "$file" ]] && exit 1
           done
           exit 0
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
 
-      - name: Install Cygwin, caching disabled
+      - name: Install Cygwin, cache restoreonly
         uses: ./
         with:
-          package-cache: disabled
+          cache: restoreonly
 
-      # This assumes 3 and tests 5
-      - name: Ensure mksh not downloaded
+      # This assumes 8 and proves 1
+      - name: Ensure balance not downloaded
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/mksh-*.tar.*; do
+          for file in /cygdrive/c/cygwin-packages/*/*/*/*/balance-*.tar.*; do
             [[ -f "$file" ]] && exit 1
           done
           exit 0
 
+  test-cache-diff:
+    name: Ensure caches are only created when needed
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 0) {
+              core.setFailed('Expected zero cache entries, found ' + response.data.total_count);
+            }
+
+      # Use an installation from the Cygwin Time Machine, to avoid the risk of
+      # a poorly timed package update to a regular mirror causing the packages
+      # to legitimately change.  This uses `saveonly`, so there's no chance of
+      # it picking up a cache from outside the job, and future steps will pick
+      # the cache from this job in preference to ones from other jobs.
+      - name: Install Cygwin
+        uses: ./
+        with:
+          cache: saveonly
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
+
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 1) {
+              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+            }
+
       - name: Delete the Cygwin installation and downloaded packages
         run: |
-          Remove-Item -Force -Recurse C:\cygwin
-          Remove-Item -Force -Recurse C:\cygwin-packages
-          Remove-Item -Force -Recurse C:\cygwin-packages-checksum.*
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
+
+      - name: Install Cygwin again
+        uses: ./
+        with:
+          cache: enabled
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
+
+      # Should be exactly the same set of packages, so the cache shouldn't have
+      # been updated.
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 1) {
+              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+            }
+
+      - name: Delete the Cygwin installation and downloaded packages
+        run: |
+          Remove-Item -Force -Recurse -Path C:\cygwin
+          Remove-Item -Force -Recurse -Path C:\cygwin-packages
+          if (Test-Path -Path C:\_package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          }
+
+      - name: Install Cygwin with a new package
+        uses: ./
+        with:
+          cache: enabled
+          packages: ascii
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
+
+      # Adding a package should have forced a new cache to be created
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 2) {
+              core.setFailed('Expected two cache entries, found ' + response.data.total_count);
+            }

@@ -5,18 +5,9 @@ name: Cache performance testing
 # it is something that's time consuming.
 on: workflow_dispatch
 
-# Avoid running at the same time as other actions that interfere with caches,
-# to avoid pollution.
-concurrency: caches
-
 jobs:
-  clear-caches:
-    uses: ./.github/workflows/clear-caches.yml
-    permissions:
-      actions: write
-
-  # There should now be no cache, so we can test how long it takes to do an
-  # install without a cache while building the cache for the later action.
+  # This will populate the cache without using any pre-existing cache, so we
+  # can see how long it takes to install without the cache.
   install-without-cache:
     runs-on: windows-latest
     needs: clear-caches
@@ -30,8 +21,11 @@ jobs:
           packages: >
             biber doxygen evolution kde-dev-utils
             mkvtoolnix-debuginfo nghttp x11vnc
-          package-cache: saveonly
+          cache: saveonly
 
+  # Because the cache restore process will prefer caches from the same job,
+  # this will always restore the cache created by the install-without-cache
+  # job, so we can check what difference using the cache makes.
   install-with-cache:
     runs-on: windows-latest
     needs: install-without-cache
@@ -45,4 +39,4 @@ jobs:
           packages: >
             biber doxygen evolution kde-dev-utils
             mkvtoolnix-debuginfo nghttp x11vnc
-          package-cache: enabled
+          cache: restoreonly
