@@ -147,31 +147,11 @@ runs:
           Write-Output update_package_cache=YesPlease >>$Env:GITHUB_OUTPUT
         }
 
-    # The GitHub actions/cache action will use the `tar` included in Git for
-    # Windows if it's present, or the `tar` provided by Windows itself if not.
-    # For reasons I haven't yet understood, as of Cygwin 3.3.5-1, if Cygwin is
-    # installed, Git for Windows' `tar` will fail.  To avoid that, hide Git for
-    # Windows' `tar` to force the cache save to use the system `tar`, which
-    # works just fine.
-    - if: steps.refresh-cache.outputs.update_package_cache != ''
-      shell: pwsh
-      run: |
-        if (Test-Path -Path "C:\Program Files\Git\usr\bin\tar.exe") {
-          Move-Item -Path "C:\Program Files\Git\usr\bin\tar.exe" -Destination "C:\Program Files\Git\usr\bin\_tar.exe"
-        }
-
     - if: steps.refresh-cache.outputs.update_package_cache != ''
       uses: actions/cache/save@v3.2.0
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
-
-    - if: always() && steps.refresh-cache.outputs.update_package_cache != ''
-      shell: pwsh
-      run: |
-        if (Test-Path -Path "C:\Program Files\Git\usr\bin\_tar.exe") {
-          Move-Item -Path "C:\Program Files\Git\usr\bin\_tar.exe" -Destination "C:\Program Files\Git\usr\bin\tar.exe"
-        }
 
     - if: ${{ inputs.add-to-path  == 'true' }}
       run: echo "${{ inputs.install-dir }}\bin" >> $env:GITHUB_PATH
