@@ -44,7 +44,7 @@ runs:
     # available, the most "local" one will be chosen, e.g. a cache from a
     # different job in this run will be chosen in preference to a cache from a
     # different run.
-    - uses: actions/cache/restore@v3
+    - uses: actions/cache/restore@v3.2.0
       if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
       id: cache-restore
       with:
@@ -161,7 +161,7 @@ runs:
         }
 
     - if: steps.refresh-cache.outputs.update_package_cache != ''
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v3.2.0
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
