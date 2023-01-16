@@ -44,7 +44,7 @@ runs:
             ("${{ inputs.cache-ref }}" -ne "v3.2.0") -and
             ("$(bash.exe --version)".contains("cygwin"))) {
           Write-Output "::warning title=Cache options issue::Cygwin binaries are in the path, and caching is running with a not-known-as-working cache action.  See cygwin-install-action README for details."
-        } else if (("${{ inputs.cache-ref }}" -ne "v3") -and
+        } elseif (("${{ inputs.cache-ref }}" -ne "v3") -and
                    ("${{ inputs.cache-ref }}" -ne "v3.2.0")) {
           Write-Output "::error title=Cache options issue::cache-ref must be 'v3' or 'v3.2.0'"
           exit 1
