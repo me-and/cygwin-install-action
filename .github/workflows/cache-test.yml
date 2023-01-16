@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   bad-cache-arg:
-    name: Ensure bad cache arguments cause failures
+    name: Check option handling
 
     runs-on: windows-latest
 
@@ -33,7 +33,7 @@ jobs:
   # of these packages as a flag to check when the cache has and hasn't been
   # updated.
   validate-dependencies:
-    name: Ensure there's no unexpected package interdependencies
+    name: Validate package interdependency
     runs-on: windows-latest
     strategy:
       matrix:
@@ -95,7 +95,7 @@ jobs:
           done
 
   test-cache-options:
-    name: Test the different cache enabling options
+    name: Test cache options
     runs-on: windows-latest
 
     # Ordering is important here to ensure the correct things are in the
@@ -264,7 +264,7 @@ jobs:
           exit 0
 
   test-cache-diff:
-    name: Ensure caches are only created when needed
+    name: No unnecessary updates
 
     runs-on: windows-latest
 

@@ -9,6 +9,7 @@ jobs:
   # This will populate the cache without using any pre-existing cache, so we
   # can see how long it takes to install without the cache.
   install-without-cache:
+    name: Install without cache
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -80,6 +81,7 @@ jobs:
   # this will always restore the cache created by the install-without-cache
   # job, so we can check what difference using the cache makes.
   install-with-cache:
+    name: Install with cache
     runs-on: windows-latest
     needs: install-without-cache
     steps:
