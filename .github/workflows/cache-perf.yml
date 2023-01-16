@@ -5,12 +5,29 @@ name: Cache performance testing
 # it is something that's time consuming.
 on: workflow_dispatch
 
+# This workflow creates very large caches, and multiple parallel runs
+# will cause problems as each evicts the other's cache.
+#
+# As of 15 January 2023, this package list generated packages of ~4GB;
+# the GitHub cache limit is 10GB.  That means there can only be two
+# parallel runs of the jobs in this workflow, which is taken up by the
+# two matrix strategies.
+concurrency: big-caches
+
 jobs:
   # This will populate the cache without using any pre-existing cache, so we
   # can see how long it takes to install without the cache.
   install-without-cache:
     name: Install without cache
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - cache-action-ver: v3
+            add-to-path: false
+          - cache-action-ver: v3.2.0
+            add-to-path: true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -76,6 +93,8 @@ jobs:
             texlive-collection-science-doc texlive-collection-xetex
             texlive-collection-xetex-doc texlive-debuginfo untex
           cache: saveonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-action-ver: ${{ matrix.cache-action-ver }}
 
   # Because the cache restore process will prefer caches from the same job,
   # this will always restore the cache created by the install-without-cache
@@ -84,6 +103,20 @@ jobs:
     name: Install with cache
     runs-on: windows-latest
     needs: install-without-cache
+
+    # Caches only get restored if they match the "version", and the
+    # version includes the compression tool used.  v3.2.0 uses gzip, v3
+    # (at least while that means v3.2.3) uses zstandard, so each matrix
+    # option here will pull the cache from the matching matrix
+    # operation in the previous run.
+    strategy:
+      matrix:
+        include:
+          - cache-action-ver: v3
+            add-to-path: false
+          - cache-action-ver: v3.2.0
+            add-to-path: true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -149,3 +182,5 @@ jobs:
             texlive-collection-science-doc texlive-collection-xetex
             texlive-collection-xetex-doc texlive-debuginfo untex
           cache: restoreonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-action-ver: ${{ matrix.cache-action-ver }}

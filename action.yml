@@ -30,10 +30,22 @@ inputs:
     description: Cache package downloads for speed
     required: false
     default: disabled
+  cache-ref:
+    description: Version of the cache action to use
+    required: false
+    default: v3
 
 runs:
   using: "composite"
   steps:
+    - shell: pwsh
+      run: |
+        if (("${{ inputs.cache }}" -ne "disabled") -and
+            ("${{ inputs.cache-ref }}" -ne "v3.2.0") -and
+            ("$(bash.exe --version)".contains("cygwin"))) {
+          Write-Output "::warning title=Cache options issue::Cygwin binaries are in the path, and caching is running with a not-known-as-working cache action.  See cygwin-install-action README for details."
+        }
+
     # The cache naming scheme means every run of this action should have a
     # different name.  That means there will always be a "cache miss", because
     # the name will never match a previous run.  That's good: we can still get
@@ -44,7 +56,7 @@ runs:
     # available, the most "local" one will be chosen, e.g. a cache from a
     # different job in this run will be chosen in preference to a cache from a
     # different run.
-    - uses: actions/cache/restore@v3.2.0
+    - uses: actions/cache/restore@${{ inputs.cache-ref }}
       if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
       id: cache-restore
       with:
@@ -155,7 +167,7 @@ runs:
         }
 
     - if: steps.refresh-cache.outputs.update_package_cache != ''
-      uses: actions/cache/save@v3.2.0
+      uses: actions/cache/save@${{ inputs.cache-ref }}
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages

@@ -98,6 +98,14 @@ jobs:
     name: Test cache options
     runs-on: windows-latest
 
+    strategy:
+      matrix:
+        include:
+          - add-to-path: true
+            cache-ref: v3.2.0
+          - add-to-path: false
+            cache-ref: v3
+
     # Ordering is important here to ensure the correct things are in the
     # correct caches at the correct times.
     #
@@ -125,6 +133,8 @@ jobs:
         with:
           packages: afio
           cache: saveonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
@@ -139,6 +149,8 @@ jobs:
         with:
           packages: arc
           cache: enabled
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This tests 3 + 6
       - name: Ensure afio downloaded
@@ -162,6 +174,8 @@ jobs:
         with:
           packages: argon2
           cache: restoreonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This tests 2 + 8
       - name: Ensure arc downloaded
@@ -185,6 +199,8 @@ jobs:
         with:
           packages: ascii
           cache: enabled
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 6 and proves 4
       - name: Ensure argon2 not downloaded
@@ -208,6 +224,8 @@ jobs:
         with:
           packages: autossh
           cache: saveonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 2 and proves 7
       - name: Ensure ascii not downloaded
@@ -231,6 +249,8 @@ jobs:
         with:
           packages: balance
           cache: disabled
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 3 and proves 5
       - name: Ensure autossh not downloaded
@@ -253,6 +273,8 @@ jobs:
         uses: ./
         with:
           cache: restoreonly
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 8 and proves 1
       - name: Ensure balance not downloaded
@@ -265,6 +287,18 @@ jobs:
 
   test-cache-diff:
     name: No unnecessary updates
+
+    strategy:
+      matrix:
+        include:
+          - add-to-path: true
+            cache-ref: v3.2.0
+          - add-to-path: false
+            cache-ref: v3
+          # The below won't create a second cache due to
+          # actions/cache#1073.
+          - add-to-path: true
+            cache-ref: v3
 
     runs-on: windows-latest
 
@@ -299,6 +333,8 @@ jobs:
           cache: saveonly
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       - name: Check number of caches in this job
         uses: actions/github-script@v6
@@ -330,6 +366,8 @@ jobs:
           cache: enabled
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # Should be exactly the same set of packages, so the cache shouldn't have
       # been updated.
@@ -364,6 +402,8 @@ jobs:
           packages: ascii
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
+          add-to-path: ${{ matrix.add-to-path }}
+          cache-ref: ${{ matrix.cache-ref }}
 
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
@@ -378,6 +418,25 @@ jobs:
               key: key_prefix
             });
             core.info('Found ' + response.data.total_count + ' caches');
-            if (response.data.total_count != 2) {
+            if ((context.matrix.add-to-path == 'true') &&
+                (context.matrix.cache-ref == 'v3')) {
+            {
+              # actions/cache#1073 means we're expecting the number of
+              # cache entries to be 1, even though we'd like it to be
+              # 2.
+              if (response.data.total_count == 1) {
+                core.notice(
+                  'Cache creation unfortunately failed, as expected',
+                  {title: 'Cache creation failed'}
+                );
+              } else if (response.data.total_count == 2) {
+                core.warning(
+                  'Perhaps actions/cache#1073 has been fixed?',
+                  {title: 'Cache creation unexpectedly succeeded'}
+                );
+              } else {
+                core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
+              }
+            } else if (response.data.total_count != 2) {
               core.setFailed('Expected two cache entries, found ' + response.data.total_count);
             }
