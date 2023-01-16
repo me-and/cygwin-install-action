@@ -44,6 +44,10 @@ runs:
             ("${{ inputs.cache-ref }}" -ne "v3.2.0") -and
             ("$(bash.exe --version)".contains("cygwin"))) {
           Write-Output "::warning title=Cache options issue::Cygwin binaries are in the path, and caching is running with a not-known-as-working cache action.  See cygwin-install-action README for details."
+        } else if (("${{ inputs.cache-ref }}" -ne "v3") -and
+                   ("${{ inputs.cache-ref }}" -ne "v3.2.0")) {
+          Write-Output "::error title=Cache options issue::cache-ref must be 'v3' or 'v3.2.0'"
+          exit 1
         }
 
     # The cache naming scheme means every run of this action should have a
@@ -56,8 +60,23 @@ runs:
     # available, the most "local" one will be chosen, e.g. a cache from a
     # different job in this run will be chosen in preference to a cache from a
     # different run.
-    - uses: actions/cache/restore@${{ inputs.cache-ref }}
-      if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
+    - uses: actions/cache/restore@v3
+      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3'
+      id: cache-restore
+      with:
+        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
+        path: C:\cygwin-packages
+        restore-keys: |
+          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-
+          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-
+          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-
+          cygwin-install-action-packages-${{ github.run_id }}-
+          cygwin-install-action-packages-
+
+    # No way, as best I can tell, to parameterise the ref to use, so just
+    # hard-code the options.
+    - uses: actions/cache/restore@v3.2.0
+      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3.2.0'
       id: cache-restore
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
@@ -166,7 +185,12 @@ runs:
           Move-Item -Path "${{ inputs.install-dir }}\bin\tar.exe" -Destination "${{ inputs.install-dir }}\bin\_tar.exe"
         }
 
-    - if: steps.refresh-cache.outputs.update_package_cache != ''
+    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3'
+      uses: actions/cache/save@v3
+      with:
+        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
+        path: C:\cygwin-packages
+    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3.2.0'
       uses: actions/cache/save@${{ inputs.cache-ref }}
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
