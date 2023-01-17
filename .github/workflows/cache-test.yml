@@ -420,9 +420,6 @@ jobs:
             core.info('Found ' + response.data.total_count + ' caches');
             if ((context.matrix.add-to-path == 'true') &&
                 (context.matrix.cache-ref == 'v3')) {
-              # actions/cache#1073 means we're expecting the number of
-              # cache entries to be 1, even though we'd like it to be
-              # 2.
               if (response.data.total_count == 1) {
                 core.notice(
                   'Cache creation unfortunately failed, as expected'
