@@ -97,7 +97,7 @@ runs:
         Get-ChildItem -Attributes !Directory -Exclude setup.ini -Recurse -Path C:\cygwin-packages\ |
           Get-FileHash -Algorithm MD5 |
           Sort-Object -Property Path |
-          ConvertTo-Csv >C:\_package-cache-hashes.csv
+          ConvertTo-Csv >C:\_cygwin-package-cache-hashes.csv
 
     - run: |
         $cacheBehaviour = '${{ inputs.cache }}'
@@ -160,22 +160,31 @@ runs:
       shell: powershell
 
     # Decide whether the update process above has downloaded new or updated
-    # packages that aren't in the previous cache.
+    # packages that aren't in the previous cache.  Save the hashes to file,
+    # too, in case a later action wants to check the contents.
     - if: inputs.cache == 'enabled' || inputs.cache == 'saveonly'
       id: refresh-cache
       shell: pwsh
       run: |
-        if (Test-Path -Path C:\_package-cache-hashes.csv) {
-          $newHashes = Get-ChildItem -Attributes !Directory -Exclude setup.ini -Recurse -Path C:\cygwin-packages\ |
-            Get-FileHash -Algorithm MD5 |
-            Sort-Object -Property Path
-          $diff = Compare-Object -ReferenceObject (Import-Csv -Path C:\_package-cache-hashes.csv) -DifferenceObject $newHashes -Property Hash,Path
+        if (Test-Path -Path C:\_cygwin-package-cache-hashes.csv) {
+          $oldHashes = Import-Csv C:\_cygwin-package-cache-hashes.csv
+        } else {
+          $oldHashes = $null
+        }
+
+        $newHashes = Get-ChildItem -Attributes !Directory -Exclude setup.ini -Recurse -Path C:\cygwin-packages\ |
+          Get-FileHash -Algorithm MD5 |
+          Sort-Object -Property Path
+
+        if ($oldHashes -eq $null) {
+          $newHashes | ConvertTo-Csv >C:\_cygwin-package-cache-hashes.csv
+          Write-Output update_package_cache=YesPlease >>$Env:GITHUB_OUTPUT
+        } else {
+          $diff = Compare-Object -ReferenceObject $oldHashes -DifferenceObject $newHashes -Property Hash,Path
           if ($diff.length -gt 0) {
             Write-Output update_package_cache=YesPlease >>$Env:GITHUB_OUTPUT
             Format-List -InputObject $diff
           }
-        } else {
-          Write-Output update_package_cache=YesPlease >>$Env:GITHUB_OUTPUT
         }
 
     - if: steps.refresh-cache.outputs.update_package_cache != ''
