@@ -187,12 +187,12 @@ runs:
           }
         }
 
-    - if: steps.refresh-cache.outputs.update_package_cache != ''
-      shell: pwsh
-      run: |
-        if (Test-Path -Path "${{ inputs.install-dir }}\bin\tar.exe") {
-          Move-Item -Path "${{ inputs.install-dir }}\bin\tar.exe" -Destination "${{ inputs.install-dir }}\bin\_tar.exe"
-        }
+#    - if: steps.refresh-cache.outputs.update_package_cache != ''
+#      shell: pwsh
+#      run: |
+#        if (Test-Path -Path "${{ inputs.install-dir }}\bin\tar.exe") {
+#          Move-Item -Path "${{ inputs.install-dir }}\bin\tar.exe" -Destination "${{ inputs.install-dir }}\bin\_tar.exe"
+#        }
 
     - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3'
       uses: actions/cache/save@v3
@@ -205,12 +205,12 @@ runs:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
 
-    - if: steps.refresh-cache.outputs.update_package_cache != ''
-      shell: pwsh
-      run: |
-        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_tar.exe") {
-          Move-Item -Path "${{ inputs.install-dir }}\bin\_tar.exe" -Destination "${{ inputs.install-dir }}\bin\tar.exe"
-        }
+#    - if: steps.refresh-cache.outputs.update_package_cache != ''
+#      shell: pwsh
+#      run: |
+#        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_tar.exe") {
+#          Move-Item -Path "${{ inputs.install-dir }}\bin\_tar.exe" -Destination "${{ inputs.install-dir }}\bin\tar.exe"
+#        }
 
     - if: ${{ inputs.add-to-path  == 'true' }}
       run: echo "${{ inputs.install-dir }}\bin" >> $env:GITHUB_PATH
