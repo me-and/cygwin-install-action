@@ -293,6 +293,7 @@ jobs:
 
     strategy:
       matrix:
+        clear-between-steps: [true, false]
         include:
           - add-to-path: true
             cache-ref: v3.2.0
@@ -356,6 +357,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
+        if: matrix.clear-between-steps == 'true'
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
@@ -391,6 +393,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
+        if: matrix.clear-between-steps == 'true'
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
