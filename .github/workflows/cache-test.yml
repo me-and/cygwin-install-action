@@ -425,13 +425,11 @@ jobs:
               # 2.
               if (response.data.total_count == 1) {
                 core.notice(
-                  'Cache creation unfortunately failed, as expected',
-                  {title: 'Cache creation failed'}
+                  'Cache creation unfortunately failed, as expected'
                 );
               } else if (response.data.total_count == 2) {
                 core.warning(
-                  'Perhaps actions/cache#1073 has been fixed?',
-                  {title: 'Cache creation unexpectedly succeeded'}
+                  'Cache creation unexpectedly succeeded; perhaps actions/cache#1073 has been fixed?'
                 );
               } else {
                 core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
