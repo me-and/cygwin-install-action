@@ -199,7 +199,7 @@ runs:
     - if: steps.refresh-cache.outputs.update_package_cache != ''
       shell: pwsh
       run: |
-        if (Test-Path -Path "${{ inputs.install-dir }}\bin\tar.exe") {
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_tar.exe") {
           Move-Item -Path "${{ inputs.install-dir }}\bin\_tar.exe" -Destination "${{ inputs.install-dir }}\bin\tar.exe"
         }
 
