@@ -32,6 +32,9 @@ jobs:
   # install one package, we won't find the other installed, so we can use each
   # of these packages as a flag to check when the cache has and hasn't been
   # updated.
+  #
+  # These packages were chosen because (a) they're small and (b) they don't
+  # pull in any other dependencies.
   validate-dependencies:
     name: Validate package interdependency
     runs-on: windows-latest
