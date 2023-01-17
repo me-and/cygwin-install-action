@@ -23,9 +23,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - cache-action-ver: v3
+          - cache-ref: v3
             add-to-path: false
-          - cache-action-ver: v3.2.0
+          - cache-ref: v3.2.0
             add-to-path: true
 
     steps:
@@ -94,7 +94,7 @@ jobs:
             texlive-collection-xetex-doc texlive-debuginfo untex
           cache: saveonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-action-ver: ${{ matrix.cache-action-ver }}
+          cache-ref: ${{ matrix.cache-ref }}
 
   # Because the cache restore process will prefer caches from the same job,
   # this will always restore the cache created by the install-without-cache
@@ -112,9 +112,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - cache-action-ver: v3
+          - cache-ref: v3
             add-to-path: false
-          - cache-action-ver: v3.2.0
+          - cache-ref: v3.2.0
             add-to-path: true
 
     steps:
@@ -183,4 +183,4 @@ jobs:
             texlive-collection-xetex-doc texlive-debuginfo untex
           cache: restoreonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-action-ver: ${{ matrix.cache-action-ver }}
+          cache-ref: ${{ matrix.cache-ref }}
