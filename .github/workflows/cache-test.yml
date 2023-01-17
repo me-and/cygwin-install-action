@@ -369,7 +369,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
-        if: matrix.clean-reinstalls == 'true'
+        if: matrix.clean-reinstalls == true
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
@@ -405,7 +405,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
-        if: matrix.clean-reinstalls == 'true'
+        if: matrix.clean-reinstalls == true
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
