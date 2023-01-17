@@ -425,11 +425,13 @@ jobs:
                 (context.matrix.cache-ref == 'v3')) {
               if (response.data.total_count == 1) {
                 core.notice(
-                  'Cache creation unfortunately failed, as expected'
+                  'Cache creation unfortunately failed, as expected',
+                  {title: 'Cache creation failed'}
                 );
               } else if (response.data.total_count == 2) {
                 core.warning(
-                  'Cache creation unexpectedly succeeded; perhaps actions/cache#1073 has been fixed?'
+                  'Perhaps actions/cache#1073 has been fixed?',
+                  {title: 'Cache creation unexpectedly succeeded'}
                 );
               } else {
                 core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
