@@ -187,6 +187,11 @@ runs:
           }
         }
 
+    # This step allows things to work when cache v3.2.0 is in use; without this
+    # step, cache saving tries to use Cygwin tar if it's in the path, but
+    # restore (which normally happens before Cygwin is installed) will use
+    # Windows tar.  Different tar = different cache versions = unable to
+    # restore anything.
     - if: steps.refresh-cache.outputs.update_package_cache != ''
       shell: pwsh
       run: |
