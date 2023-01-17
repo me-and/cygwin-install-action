@@ -411,6 +411,9 @@ jobs:
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
         uses: actions/github-script@v6
+        env:  # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
+          ADD_TO_PATH: ${{ matrix.add-to-path }}
+          CACHE_REF: ${{ matrix.cache-ref }}
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
@@ -421,8 +424,8 @@ jobs:
               key: key_prefix
             });
             core.info('Found ' + response.data.total_count + ' caches');
-            if ((context.matrix.add-to-path == 'true') &&
-                (context.matrix.cache-ref == 'v3')) {
+            if ((process.env.ADD_TO_PATH == 'true') &&
+                (process.env.CACHE_REF == 'v3')) {
               if (response.data.total_count == 1) {
                 core.notice(
                   'Cache creation unfortunately failed, as expected',
