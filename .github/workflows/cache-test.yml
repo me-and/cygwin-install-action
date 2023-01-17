@@ -296,25 +296,25 @@ jobs:
         include:
           - add-to-path: true
             cache-ref: v3.2.0
-            clean-between-steps: true
+            clean-reinstalls: true
           - add-to-path: true
             cache-ref: v3.2.0
-            clean-between-steps: false
+            clean-reinstalls: false
           - add-to-path: false
             cache-ref: v3
-            clear-between-steps: true
+            clean-reinstalls: true
           - add-to-path: false
             cache-ref: v3
-            clear-between-steps: false
+            clean-reinstalls: false
           # The below *might* create a second cache!?
           - add-to-path: true
             cache-ref: v3
-            clear-between-steps: true
+            clean-reinstalls: true
           # The below won't create a second cache due to
           # actions/cache#1073.
           - add-to-path: true
             cache-ref: v3
-            clear-between-steps: false
+            clean-reinstalls: false
 
     runs-on: windows-latest
 
@@ -369,7 +369,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
-        if: matrix.clear-between-steps == 'true'
+        if: matrix.clean-reinstalls == 'true'
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
@@ -405,7 +405,7 @@ jobs:
             }
 
       - name: Delete the Cygwin installation and downloaded packages
-        if: matrix.clear-between-steps == 'true'
+        if: matrix.clean-reinstalls == 'true'
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
