@@ -3,9 +3,8 @@ name: Caching tests
 on: [push, pull_request]
 
 jobs:
-  test-cache-options:
-    name: Test cache options
-    runs-on: windows-latest
+  test-cache-diff:
+    name: No unnecessary updates
 
     strategy:
       fail-fast: false
@@ -13,40 +12,80 @@ jobs:
         include:
           - add-to-path: true
             cache-ref: v3.2.0
+            clean-reinstalls: true
+          - add-to-path: true
+            cache-ref: v3.2.0
+            clean-reinstalls: false
           - add-to-path: false
             cache-ref: v3
+            clean-reinstalls: true
+          - add-to-path: false
+            cache-ref: v3
+            clean-reinstalls: false
+          # The below *might* create a second cache!?
+          - add-to-path: true
+            cache-ref: v3
+            clean-reinstalls: true
+          # The below won't create a second cache due to
+          # actions/cache#1073.
+          - add-to-path: true
+            cache-ref: v3
+            clean-reinstalls: false
 
-    # Ordering is important here to ensure the correct things are in the
-    # correct caches at the correct times.
-    #
-    # This also relies on having six Cygwin packages that don't have any
-    # cross-dependencies (and ideally are small and have few dependencies of
-    # their own), so we can distinguish what's cached at what step.
-    #
-    # We test for the correct behaviour in the following circumstances:
-    #
-    # option      | saves   | restores
-    # ------------+---------+----------
-    # disabled    | no (1)  | no (5)
-    # enabled     | yes (2) | yes (6)
-    # saveonly    | yes (3) | no (7)
-    # restoreonly | no (4)  | yes (8)
+    runs-on: windows-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # The first Cygwin installation step here must be a "saveonly" step.
-      # This means any subsequent steps in this job will pick up a cache
-      # created earlier in this job, rather than a cache from a different job.
-      - name: Install Cygwin + afio, cache saveonly
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 0) {
+              core.setFailed('Expected zero cache entries, found ' + response.data.total_count);
+            }
+
+      # Use an installation from the Cygwin Time Machine, to avoid the risk of
+      # a poorly timed package update to a regular mirror causing the packages
+      # to legitimately change.  This uses `saveonly`, so there's no chance of
+      # it picking up a cache from outside the job, and future steps will pick
+      # the cache from this job in preference to ones from other jobs.
+      - name: Install Cygwin
         uses: ./
         with:
-          packages: afio
           cache: saveonly
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
           cache-ref: ${{ matrix.cache-ref }}
 
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 1) {
+              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+            }
+
       - name: Delete the Cygwin installation and downloaded packages
+        if: matrix.clean-reinstalls == true
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
@@ -54,24 +93,35 @@ jobs:
             Remove-Item -Force -Path C:\_package-cache-hashes.csv
           }
 
-      - name: Install Cygwin + arc, cache enabled
+      - name: Install Cygwin again
         uses: ./
         with:
-          packages: arc
           cache: enabled
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
           cache-ref: ${{ matrix.cache-ref }}
 
-      # This tests 3 + 6
-      - name: Ensure afio downloaded
-        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
-        run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/afio-*.tar.*; do
-            [[ -f "$file" ]] && exit 0
-          done
-          exit 1
+      # Should be exactly the same set of packages, so the cache shouldn't have
+      # been updated.
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 1) {
+              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+            }
 
       - name: Delete the Cygwin installation and downloaded packages
+        if: matrix.clean-reinstalls == true
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
@@ -79,19 +129,47 @@ jobs:
             Remove-Item -Force -Path C:\_package-cache-hashes.csv
           }
 
-      - name: Install Cygwin + argon2, cache restoreonly
+      - name: Install Cygwin with a new package
         uses: ./
         with:
-          packages: argon2
-          cache: restoreonly
+          cache: enabled
+          packages: ascii
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
           cache-ref: ${{ matrix.cache-ref }}
 
-      # This tests 2 + 8
-      - name: Ensure arc downloaded
-        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
-        run: |
-          for file in /cygdrive/c/cygwin-packages/*/*/*/*/arc-*.tar.*; do
-            [[ -f "$file" ]] && exit 0
-          done
-          exit 1
+      # Adding a package should have forced a new cache to be created
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        env:  # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
+          ADD_TO_PATH: ${{ matrix.add-to-path }}
+          CACHE_REF: ${{ matrix.cache-ref }}
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if ((process.env.ADD_TO_PATH == 'true') &&
+                (process.env.CACHE_REF == 'v3')) {
+              if (response.data.total_count == 1) {
+                core.notice(
+                  'Cache creation unfortunately failed, as expected',
+                  {title: 'Cache creation failed'}
+                );
+              } else if (response.data.total_count == 2) {
+                core.warning(
+                  'Perhaps actions/cache#1073 has been fixed?',
+                  {title: 'Cache creation unexpectedly succeeded'}
+                );
+              } else {
+                core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
+              }
+            } else if (response.data.total_count != 2) {
+              core.setFailed('Expected two cache entries, found ' + response.data.total_count);
+            }
