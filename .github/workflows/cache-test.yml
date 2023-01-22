@@ -34,6 +34,22 @@ jobs:
               core.setFailed('Expected zero cache entries, found ' + response.data.total_count);
             }
 
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 0) {
+              core.setFailed('Expected zero cache entries, found ' + response.data.total_count);
+            }
+
       # Use an installation from the Cygwin Time Machine, to avoid the risk of
       # a poorly timed package update to a regular mirror causing the packages
       # to legitimately change.  This uses `saveonly`, so there's no chance of
@@ -47,41 +63,6 @@ jobs:
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
 
-      - name: Check number of caches in this job
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
-            core.debug('Cache prefix: ' + key_prefix);
-            const response = await github.rest.actions.getActionsCacheList({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              key: key_prefix
-            });
-            core.info('Found ' + response.data.total_count + ' caches');
-            if (response.data.total_count != 1) {
-              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
-            }
-
-      - name: Delete the Cygwin installation and downloaded packages
-        if: matrix.clean-reinstalls == true
-        run: |
-          Remove-Item -Force -Recurse -Path C:\cygwin
-          Remove-Item -Force -Recurse -Path C:\cygwin-packages
-          if (Test-Path -Path C:\_cygwin-package-cache-hashes.csv) {
-            Remove-Item -Force -Path C:\_cygwin-package-cache-hashes.csv
-          }
-
-      - name: Install Cygwin again
-        uses: ./
-        with:
-          cache: enabled
-          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
-          check-sig: false
-          add-to-path: ${{ matrix.add-to-path }}
-
-      # Should be exactly the same set of packages, so the cache shouldn't have
-      # been updated.
       - name: Check number of caches in this job
         uses: actions/github-script@v6
         with:
@@ -131,4 +112,26 @@ jobs:
             core.info('Found ' + response.data.total_count + ' caches');
             if (response.data.total_count != 2) {
               core.setFailed('Expected two cache entries, found ' + response.data.total_count);
+            }
+
+      - name: Cache some random bits
+        uses: actions/cache/save@v3
+        with:
+          key: cygwin-install-action-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{strategy.job-index }}-${{ github.action }}
+          path: C:\cygwin\var\log
+
+      - name: Check number of caches in this job
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const key_prefix = 'cygwin-install-action-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
+            core.debug('Cache prefix: ' + key_prefix);
+            const response = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix
+            });
+            core.info('Found ' + response.data.total_count + ' caches');
+            if (response.data.total_count != 1) {
+              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
             }
