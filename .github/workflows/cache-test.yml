@@ -399,7 +399,7 @@ jobs:
               repo: context.repo.repo,
               key: key_prefix
             });
-            core.info(`Found ${response.data.total_count} caches');
+            core.info(`Found ${response.data.total_count} caches`);
             if (response.data.total_count != 1) {
               core.setFailed(`Expected one cache entry, found ${response.data.total_count}`);
             }
