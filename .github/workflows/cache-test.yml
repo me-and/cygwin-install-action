@@ -9,28 +9,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - add-to-path: true
-            cache-ref: v3.2.0
-            clean-reinstalls: true
-          - add-to-path: true
-            cache-ref: v3.2.0
-            clean-reinstalls: false
-          - add-to-path: false
-            cache-ref: v3
-            clean-reinstalls: true
-          - add-to-path: false
-            cache-ref: v3
-            clean-reinstalls: false
-          # The below *might* create a second cache!?
-          - add-to-path: true
-            cache-ref: v3
-            clean-reinstalls: true
-          # The below won't create a second cache due to
-          # actions/cache#1073.
-          - add-to-path: true
-            cache-ref: v3
-            clean-reinstalls: false
+        add-to-path: [true, false]
+        clean-reinstalls: [true, false]
 
     runs-on: windows-latest
 
@@ -66,7 +46,6 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       - name: Check number of caches in this job
         uses: actions/github-script@v6
@@ -100,7 +79,6 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # Should be exactly the same set of packages, so the cache shouldn't have
       # been updated.
@@ -137,14 +115,12 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
         uses: actions/github-script@v6
         env:  # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
           ADD_TO_PATH: ${{ matrix.add-to-path }}
-          CACHE_REF: ${{ matrix.cache-ref }}
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
@@ -155,21 +131,6 @@ jobs:
               key: key_prefix
             });
             core.info('Found ' + response.data.total_count + ' caches');
-            if ((process.env.ADD_TO_PATH == 'true') &&
-                (process.env.CACHE_REF == 'v3')) {
-              if (response.data.total_count == 1) {
-                core.notice(
-                  'Cache creation unfortunately failed, as expected',
-                  {title: 'Cache creation failed'}
-                );
-              } else if (response.data.total_count == 2) {
-                core.warning(
-                  'Perhaps actions/cache#1073 has been fixed?',
-                  {title: 'Cache creation unexpectedly succeeded'}
-                );
-              } else {
-                core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
-              }
-            } else if (response.data.total_count != 2) {
+            if (response.data.total_count != 2) {
               core.setFailed('Expected two cache entries, found ' + response.data.total_count);
             }

@@ -30,26 +30,10 @@ inputs:
     description: Cache package downloads for speed
     required: false
     default: disabled
-  cache-ref:
-    description: Version of the cache action to use
-    required: false
-    default: v3
 
 runs:
   using: "composite"
   steps:
-    - shell: pwsh
-      run: |
-        if (("${{ inputs.cache }}" -ne "disabled") -and
-            ("${{ inputs.cache-ref }}" -ne "v3.2.0") -and
-            ("$(bash.exe --version)".contains("cygwin"))) {
-          Write-Output "::warning title=Cache options issue::Cygwin binaries are in the path, and caching is running with a not-known-as-working cache action.  See cygwin-install-action README for details."
-        } elseif (("${{ inputs.cache-ref }}" -ne "v3") -and
-                   ("${{ inputs.cache-ref }}" -ne "v3.2.0")) {
-          Write-Output "::error title=Cache options issue::cache-ref must be 'v3' or 'v3.2.0'"
-          exit 1
-        }
-
     # The cache naming scheme means every run of this action should have a
     # different name.  That means there will always be a "cache miss", because
     # the name will never match a previous run.  That's good: we can still get
@@ -61,23 +45,8 @@ runs:
     # different job in this run will be chosen in preference to a cache from a
     # different run.
     - uses: actions/cache/restore@v3
-      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3'
-      id: cache-restore3
-      with:
-        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
-        path: C:\cygwin-packages
-        restore-keys: |
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-
-          cygwin-install-action-packages-${{ github.run_id }}-
-          cygwin-install-action-packages-
-
-    # No way, as best I can tell, to parameterise the ref to use, so just
-    # hard-code the options.
-    - uses: actions/cache/restore@v3.2.0
-      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3.2.0'
-      id: cache-restore320
+      if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
+      id: cache-restore
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
@@ -91,7 +60,7 @@ runs:
     # We only want to create a new cache when there are actual changes to the
     # packages available.  Work out what packages we have now, so we can
     # compare them later.
-    - if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && (steps.cache-restore3.outputs.cache-matched-key != '' || steps.cache-restore320.outputs.cache-matched-key != '')
+    - if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && steps.cache-restore.outputs.cache-matched-key != ''
       shell: pwsh
       run: |
         Get-ChildItem -Attributes !Directory -Exclude setup.ini -Recurse -Path C:\cygwin-packages\ |
@@ -199,13 +168,8 @@ runs:
           Move-Item -Path "${{ inputs.install-dir }}\bin\tar.exe" -Destination "${{ inputs.install-dir }}\bin\_tar.exe"
         }
 
-    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3'
+    - if: steps.refresh-cache.outputs.update_package_cache != ''
       uses: actions/cache/save@v3
-      with:
-        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
-        path: C:\cygwin-packages
-    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3.2.0'
-      uses: actions/cache/save@v3.2.0
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
