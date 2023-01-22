@@ -1,10 +1,14 @@
 name: Full round of cache performance testing
 
-# These tests are slow, so they don't need to be run regularly.  They also
-# aren't designed to catch problems that will be automatically spotted, but to
-# allow someone to look at the results and confirm that caching improves
-# install times.
-on: workflow_dispatch
+on:
+  # These tests are slow, so they don't need to be run regularly.  They also
+  # aren't designed to catch problems that will be automatically spotted, but to
+  # allow someone to look at the results and confirm that caching improves
+  # install times.
+  - workflow_dispatch
+  # But GitHub is miserable about dispatch actions that aren't on main, and I
+  # don't want to put this on main yet, so make it run on pushes after all.
+  - push
 
 jobs:
   test-perf:
