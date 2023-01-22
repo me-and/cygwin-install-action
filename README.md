@@ -103,7 +103,7 @@ between runs.
 This has the effect of speeding up the run of the installation itself, at the
 expense of taking slightly longer before and after the installation to check
 and potentially update the cache.  The installer will still check for updated
-packages, and will download new packages if the cached ones are out of date
+packages, and will download new packages if the cached ones are out of date.
 
 In certain circumstances you might want to ignore any existing caches but still
 store a new one, or restore a cache but not write one.  Do this by setting
@@ -117,7 +117,7 @@ save it the last time it is called.
 #### PATH problems and cache generation
 
 Due to [actions/cache#1073][], some versions of the caching actions
-that this actions uses will break if Cygwin binaries are in the PATH.
+that this action uses will break if Cygwin binaries are in the PATH.
 This isn't an issue for the first run of cygwin-install-action in any
 job, but if you're calling the action multiple times in the same job,
 you'll need to pick a way to work around this behaviour.
@@ -149,7 +149,7 @@ API call][2], or do occasional runs with `saveonly` to create a fresher small
 cache.
 
 [1]: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#deleting-cache-entries
-[2]: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#deleting-cache-entries
+[2]: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
 
 Mirrors and signatures
 ----------------------
