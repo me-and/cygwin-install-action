@@ -59,7 +59,7 @@ jobs:
         uses: ./
         with:
           cache: saveonly
-          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2023/01/21/145857
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
 
@@ -93,7 +93,7 @@ jobs:
         with:
           cache: enabled
           packages: ascii
-          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2021/01/22/181752
+          site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2023/01/21/145857
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
 
