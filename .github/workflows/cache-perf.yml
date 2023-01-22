@@ -29,6 +29,11 @@ on:
         type: string
         default: v3
 
+# This workflow can create very big caches.  To avoid that causing a problem
+# with parallel runs leading to caches being evicted, only permit one run of
+# this workflow at a time.
+concurrency: big-caches
+
 jobs:
   # This will populate the cache without using any pre-existing cache, so we
   # can see how long it takes to install without the cache.
