@@ -119,8 +119,6 @@ jobs:
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
         uses: actions/github-script@v6
-        env:  # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
-          ADD_TO_PATH: ${{ matrix.add-to-path }}
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
