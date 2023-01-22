@@ -25,7 +25,7 @@ jobs:
   test-perf-cygport:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
-    needs: cache-perf-min
+    needs: test-perf-min
     strategy:
       matrix:
         cache_ref: [v3, v3.2.0]
@@ -37,7 +37,7 @@ jobs:
   test-perf-tex:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
-    needs: cache-perf-cygport
+    needs: test-perf-cygport
     strategy:
       matrix:
         cache_ref: [v3, v3.2.0]
