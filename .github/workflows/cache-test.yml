@@ -68,8 +68,8 @@ jobs:
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
-          if (Test-Path -Path C:\_package-cache-hashes.csv) {
-            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          if (Test-Path -Path C:\_cygwin-package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_cygwin-package-cache-hashes.csv
           }
 
       - name: Install Cygwin again
@@ -103,8 +103,8 @@ jobs:
         run: |
           Remove-Item -Force -Recurse -Path C:\cygwin
           Remove-Item -Force -Recurse -Path C:\cygwin-packages
-          if (Test-Path -Path C:\_package-cache-hashes.csv) {
-            Remove-Item -Force -Path C:\_package-cache-hashes.csv
+          if (Test-Path -Path C:\_cygwin-package-cache-hashes.csv) {
+            Remove-Item -Force -Path C:\_cygwin-package-cache-hashes.csv
           }
 
       - name: Install Cygwin with a new package
