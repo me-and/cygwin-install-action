@@ -6,7 +6,7 @@ name: Cache performance testing
 on:
   workflow_dispatch:
     inputs:
-      package_list:
+      packages:
         description: Space-separated list of packages to install
         required: false
         type: string
@@ -18,7 +18,7 @@ on:
         default: v3
   workflow_call:
     inputs:
-      package_list:
+      packages:
         description: Space-separated list of packages to install
         required: false
         type: string
