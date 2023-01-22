@@ -327,15 +327,15 @@ jobs:
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
-            core.debug('Cache prefix: ' + key_prefix);
+            core.debug(`Cache prefix: ${key_prefix}`);
             const response = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo,
               key: key_prefix
             });
-            core.info('Found ' + response.data.total_count + ' caches');
+            core.info(`Found ${response.data.total_count} caches`);
             if (response.data.total_count != 0) {
-              core.setFailed('Expected zero cache entries, found ' + response.data.total_count);
+              core.setFailed(`Expected zero cache entries, found ${response.data.total_count}`);
             }
 
       # Use an installation from the Cygwin Time Machine, to avoid the risk of
@@ -357,15 +357,15 @@ jobs:
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
-            core.debug('Cache prefix: ' + key_prefix);
+            core.debug(`Cache prefix: ${key_prefix}`);
             const response = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo,
               key: key_prefix
             });
-            core.info('Found ' + response.data.total_count + ' caches');
+            core.info(`Found ${response.data.total_count} caches`);
             if (response.data.total_count != 1) {
-              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+              core.setFailed(`Expected one cache entry, found ${response.data.total_count}`);
             }
 
       - name: Delete the Cygwin installation and downloaded packages
@@ -393,15 +393,15 @@ jobs:
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
-            core.debug('Cache prefix: ' + key_prefix);
+            core.debug(`Cache prefix: ${key_prefix}`);
             const response = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo,
               key: key_prefix
             });
-            core.info('Found ' + response.data.total_count + ' caches');
+            core.info(`Found ${response.data.total_count} caches');
             if (response.data.total_count != 1) {
-              core.setFailed('Expected one cache entry, found ' + response.data.total_count);
+              core.setFailed(`Expected one cache entry, found ${response.data.total_count}`);
             }
 
       - name: Delete the Cygwin installation and downloaded packages
@@ -426,19 +426,21 @@ jobs:
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
         uses: actions/github-script@v6
-        env:  # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
+        # Need to use environment variables to access matrix values:
+        # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
+        env:
           ADD_TO_PATH: ${{ matrix.add-to-path }}
           CACHE_REF: ${{ matrix.cache-ref }}
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
-            core.debug('Cache prefix: ' + key_prefix);
+            core.debug(`Cache prefix: ${key_prefix}`);
             const response = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo,
               key: key_prefix
             });
-            core.info('Found ' + response.data.total_count + ' caches');
+            core.info(`Found ${response.data.total_count} caches`);
             if ((process.env.ADD_TO_PATH == 'true') &&
                 (process.env.CACHE_REF == 'v3')) {
               if (response.data.total_count == 1) {
@@ -452,8 +454,8 @@ jobs:
                   {title: 'Cache creation unexpectedly succeeded'}
                 );
               } else {
-                core.setFailed('Expected one or two cache entries, found ' + response.data.total_count);
+                core.setFailed(`Expected one or two cache entries, found ${response.data.total_count`);
               }
             } else if (response.data.total_count != 2) {
-              core.setFailed('Expected two cache entries, found ' + response.data.total_count);
+              core.setFailed(`Expected two cache entries, found ${response.data.total_count}`);
             }
