@@ -10,6 +10,10 @@ jobs:
   test-perf:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
+    # This workflow can create very big caches.  To avoid that causing a
+    # problem with parallel runs leading to caches being evicted, only permit
+    # one run of this workflow at a time.
+    concurrency: big-caches
     strategy:
       matrix:
         cache_ref: [v3, v3.2.0]
