@@ -27,7 +27,6 @@ Parameters
 | check-sig   | true                                         | Whether to check the setup.ini signature
 | add-to-path | true                                         | Whether to add Cygwin's `/bin` directory to the system `PATH`
 | cache       | disabled                                     | Whether to cache the package downloads
-| cache-ref   | v3                                           | What version of the cache action to use; see cache documentation
 
 Line endings
 ------------
@@ -112,32 +111,7 @@ useful when calling the action multiple times in the same run, where you
 probably want to restore the cache the first time the action is called, then
 save it the last time it is called.
 
-### Caching problems
-
-#### PATH problems and cache generation
-
-Due to [actions/cache#1073][], some versions of the caching actions
-that this action uses will break if Cygwin binaries are in the PATH.
-This isn't an issue for the first run of cygwin-install-action in any
-job, but if you're calling the action multiple times in the same job,
-you'll need to pick a way to work around this behaviour.
-
-[actions/cache#1073]: https://github.com/actions/cache/issues/1073
-
-One option is to specify `add-to-path: false`.  This means you'll need
-to explicitly specify the path to any Cygwin binaries you want to call
-(e.g. your action will need `C:\cygwin\bin\bash.exe` rather than just
-`bash`), or you can set the `PATH` explicitly in each step with `env:
-{PATH: C:\cygwin\bin}`.
-
-Alternatively, you can set `cache-ref: v3.2.0` to use a version of the
-caching action that doesn't have this issue.  This will allow you to
-have Cygwin's binaries in your PATH, but means the cache will be stored
-using native Windows' tar, and compressed with gzip, which
-significantly reduces the gains you can get compared with the later
-actions using Git for Windows' tar and zstandard.
-
-#### Oversized caches
+### Oversized caches
 
 You should make sure to clear these caches every so often.  This action, like
 the underlying Cygwin installer, doesn't remove old package files from its
@@ -163,3 +137,18 @@ Machine](http://www.crouchingtigerhiddenfruitbat.org/Cygwin/timemachine.html).
 [1] The
 [Workflow documentation](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference)
 suggests you should also use bash options `-eo pipefail`, omitted here for clarity
+
+Problems
+--------
+
+GitHub's [actions/cache][] and [@actions/cache][] will fail if Cygwin binaries
+-- specifically zstd or gzip -- are in the PATH.  This is tracked as
+[actions/cache#1073][].  This action works around that problem for its own
+caching by temporarily moving the zstd, unzstd and gzip executables before
+creating or restoring a cache; if you want to use GitHub's caching for your own
+purposes, either keep Cygwin out of your PATH, or temporarily move these
+executables out of the PATH yourself before creating or restoring the cache.
+
+[actions/cache]: https://github.com/actions/cache
+[@actions/cache]: https://github.com/actions/toolkit/tree/main/packages/cache
+[actions/cache#1073]: https://github.com/actions/cache/issues/1073

@@ -30,24 +30,25 @@ inputs:
     description: Cache package downloads for speed
     required: false
     default: disabled
-  cache-ref:
-    description: Version of the cache action to use
-    required: false
-    default: v3
 
 runs:
   using: "composite"
   steps:
-    - shell: pwsh
+    # The caching action will use Git for Windows' tar if possible, but
+    # whatever zstd or gzip it finds first in the PATH.  Git for Windows' tar
+    # doesn't work when calling Cygwin's zstd or gzip, so hide those
+    # executables temporarily.
+    #
+    # This step will only actually do anything if Cygwin is already installed
+    # and this is a subsequent run of the install action.
+    - if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
+      shell: pwsh
       run: |
-        if (("${{ inputs.cache }}" -ne "disabled") -and
-            ("${{ inputs.cache-ref }}" -ne "v3.2.0") -and
-            ("$(bash.exe --version)".contains("cygwin"))) {
-          Write-Output "::warning title=Cache options issue::Cygwin binaries are in the path, and caching is running with a not-known-as-working cache action.  See cygwin-install-action README for details."
-        } elseif (("${{ inputs.cache-ref }}" -ne "v3") -and
-                   ("${{ inputs.cache-ref }}" -ne "v3.2.0")) {
-          Write-Output "::error title=Cache options issue::cache-ref must be 'v3' or 'v3.2.0'"
-          exit 1
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\zstd.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\zstd.exe" -Destination "${{ inputs.install-dir }}\bin\_zstd.exe"
+        }
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\gzip.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\gzip.exe" -Destination "${{ inputs.install-dir }}\bin\_gzip.exe"
         }
 
     # The cache naming scheme means every run of this action should have a
@@ -60,9 +61,9 @@ runs:
     # available, the most "local" one will be chosen, e.g. a cache from a
     # different job in this run will be chosen in preference to a cache from a
     # different run.
-    - uses: actions/cache/restore@v3
-      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3'
-      id: cache-restore3
+    - uses: actions/cache/restore@v3.2.3
+      if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
+      id: cache-restore
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
@@ -73,25 +74,20 @@ runs:
           cygwin-install-action-packages-${{ github.run_id }}-
           cygwin-install-action-packages-
 
-    # No way, as best I can tell, to parameterise the ref to use, so just
-    # hard-code the options.
-    - uses: actions/cache/restore@v3.2.0
-      if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && inputs.cache-ref == 'v3.2.0'
-      id: cache-restore320
-      with:
-        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
-        path: C:\cygwin-packages
-        restore-keys: |
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-
-          cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-
-          cygwin-install-action-packages-${{ github.run_id }}-
-          cygwin-install-action-packages-
+    - if: inputs.cache == 'enabled' || inputs.cache == 'restoreonly'
+      shell: pwsh
+      run: |
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_zstd.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\_zstd.exe" -Destination "${{ inputs.install-dir }}\bin\zstd.exe"
+        }
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_gzip.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\_gzip.exe" -Destination "${{ inputs.install-dir }}\bin\gzip.exe"
+        }
 
     # We only want to create a new cache when there are actual changes to the
     # packages available.  Work out what packages we have now, so we can
     # compare them later.
-    - if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && (steps.cache-restore3.outputs.cache-matched-key != '' || steps.cache-restore320.outputs.cache-matched-key != '')
+    - if: (inputs.cache == 'enabled' || inputs.cache == 'restoreonly') && steps.cache-restore.outputs.cache-matched-key != ''
       shell: pwsh
       run: |
         Get-ChildItem -Attributes !Directory -Exclude setup.ini -Recurse -Path C:\cygwin-packages\ |
@@ -187,25 +183,18 @@ runs:
           }
         }
 
-    # This step allows things to work when cache v3.2.0 is in use; without this
-    # step, cache saving tries to use Cygwin tar if it's in the path, but
-    # restore (which normally happens before Cygwin is installed) will use
-    # Windows tar.  Different tar = different cache versions = unable to
-    # restore anything.
     - if: steps.refresh-cache.outputs.update_package_cache != ''
       shell: pwsh
       run: |
-        if (Test-Path -Path "${{ inputs.install-dir }}\bin\tar.exe") {
-          Move-Item -Path "${{ inputs.install-dir }}\bin\tar.exe" -Destination "${{ inputs.install-dir }}\bin\_tar.exe"
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\zstd.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\zstd.exe" -Destination "${{ inputs.install-dir }}\bin\_zstd.exe"
+        }
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\gzip.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\gzip.exe" -Destination "${{ inputs.install-dir }}\bin\_gzip.exe"
         }
 
-    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3'
-      uses: actions/cache/save@v3
-      with:
-        key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
-        path: C:\cygwin-packages
-    - if: steps.refresh-cache.outputs.update_package_cache != '' && inputs.cache-ref == 'v3.2.0'
-      uses: actions/cache/save@v3.2.0
+    - if: steps.refresh-cache.outputs.update_package_cache != ''
+      uses: actions/cache/save@v3.2.3
       with:
         key: cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-${{ github.action }}
         path: C:\cygwin-packages
@@ -213,8 +202,11 @@ runs:
     - if: steps.refresh-cache.outputs.update_package_cache != ''
       shell: pwsh
       run: |
-        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_tar.exe") {
-          Move-Item -Path "${{ inputs.install-dir }}\bin\_tar.exe" -Destination "${{ inputs.install-dir }}\bin\tar.exe"
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_zstd.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\_zstd.exe" -Destination "${{ inputs.install-dir }}\bin\zstd.exe"
+        }
+        if (Test-Path -Path "${{ inputs.install-dir }}\bin\_gzip.exe") {
+          Move-Item -Path "${{ inputs.install-dir }}\bin\_gzip.exe" -Destination "${{ inputs.install-dir }}\bin\gzip.exe"
         }
 
     - if: ${{ inputs.add-to-path  == 'true' }}
