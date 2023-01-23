@@ -35,6 +35,8 @@ runs:
   using: "composite"
   steps:
     - shell: bash
+      env:
+        SHELLOPTS: igncr
       run: env
 
     - shell: bash
@@ -47,6 +49,7 @@ runs:
         CXT_STRATEGY: ${{ toJSON(strategy) }}
         CXT_MATRIX: ${{ toJSON(matrix) }}
         CXT_INPUTS: ${{ toJSON(inputs) }}
+        SHELLOPTS: igncr
       run: |
         for v in CXT_{GITHUB,ENV,JOB,STEPS,RUNNER,STRATEGY,MATRIX,INPUTS}; do
           printf '::group::%s\n' "$v"
