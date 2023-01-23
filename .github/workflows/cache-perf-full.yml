@@ -10,39 +10,27 @@ on:
   # don't want to put this on main yet, so make it run on pushes after all.
   - push
 
+# This workflow can create very big caches.  To avoid that causing a problem
+# with parallel runs leading to caches being evicted, only permit one run of
+# this workflow at a time.
+concurrency: big-caches
+
 jobs:
-  # Can't schedule more than two jobs at a time else GitHub's concurrency bits
-  # will camcel some of them as soon as they're scheduled.
   test-perf-min:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
-    strategy:
-      matrix:
-        cache_ref: [v3, v3.2.0]
-    with:
-      cache_ref: ${{ matrix.cache_ref }}
 
   test-perf-cygport:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
-    needs: test-perf-min
-    strategy:
-      matrix:
-        cache_ref: [v3, v3.2.0]
     with:
-      cache_ref: ${{ matrix.cache_ref }}
       # Approximately 140MB as of January 2023
       packages: cygport
 
   test-perf-tex:
     name: Run perf tests
     uses: ./.github/workflows/cache-perf.yml
-    needs: test-perf-cygport
-    strategy:
-      matrix:
-        cache_ref: [v3, v3.2.0]
     with:
-      cache_ref: ${{ matrix.cache_ref }}
       # Approximately 4GB as of January 2023
       packages: >
         dblatex doxygen-latex emacs-auctex emacs-gettext

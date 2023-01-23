@@ -103,11 +103,7 @@ jobs:
 
     strategy:
       matrix:
-        include:
-          - add-to-path: true
-            cache-ref: v3.2.0
-          - add-to-path: false
-            cache-ref: v3
+        add-to-path: [true, false]
 
     # Ordering is important here to ensure the correct things are in the
     # correct caches at the correct times.
@@ -137,7 +133,6 @@ jobs:
           packages: afio
           cache: saveonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       - name: Delete the Cygwin installation and downloaded packages
         run: |
@@ -153,7 +148,6 @@ jobs:
           packages: arc
           cache: enabled
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This tests 3 + 6
       - name: Ensure afio downloaded
@@ -178,7 +172,6 @@ jobs:
           packages: argon2
           cache: restoreonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This tests 2 + 8
       - name: Ensure arc downloaded
@@ -203,7 +196,6 @@ jobs:
           packages: ascii
           cache: enabled
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 6 and proves 4
       - name: Ensure argon2 not downloaded
@@ -228,7 +220,6 @@ jobs:
           packages: autossh
           cache: saveonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 2 and proves 7
       - name: Ensure ascii not downloaded
@@ -253,7 +244,6 @@ jobs:
           packages: balance
           cache: disabled
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 3 and proves 5
       - name: Ensure autossh not downloaded
@@ -277,7 +267,6 @@ jobs:
         with:
           cache: restoreonly
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # This assumes 8 and proves 1
       - name: Ensure balance not downloaded
@@ -293,28 +282,8 @@ jobs:
 
     strategy:
       matrix:
-        include:
-          - add-to-path: true
-            cache-ref: v3.2.0
-            clean-reinstalls: true
-          - add-to-path: true
-            cache-ref: v3.2.0
-            clean-reinstalls: false
-          - add-to-path: false
-            cache-ref: v3
-            clean-reinstalls: true
-          - add-to-path: false
-            cache-ref: v3
-            clean-reinstalls: false
-          # The below *might* create a second cache!?
-          - add-to-path: true
-            cache-ref: v3
-            clean-reinstalls: true
-          # The below won't create a second cache due to
-          # actions/cache#1073.
-          - add-to-path: true
-            cache-ref: v3
-            clean-reinstalls: false
+        add-to-path: [true, false]
+        clean-reinstalls: [true, false]
 
     runs-on: windows-latest
 
@@ -350,7 +319,6 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2023/01/21/145857
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       - name: Check number of caches in this job
         uses: actions/github-script@v6
@@ -384,7 +352,6 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2023/01/21/145857
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # Should be exactly the same set of packages, so the cache shouldn't have
       # been updated.
@@ -421,16 +388,10 @@ jobs:
           site: http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2023/01/21/145857
           check-sig: false
           add-to-path: ${{ matrix.add-to-path }}
-          cache-ref: ${{ matrix.cache-ref }}
 
       # Adding a package should have forced a new cache to be created
       - name: Check number of caches in this job
         uses: actions/github-script@v6
-        # Need to use environment variables to access matrix values:
-        # https://github.com/actions/github-script/issues/271#issuecomment-1164911169
-        env:
-          ADD_TO_PATH: ${{ matrix.add-to-path }}
-          CACHE_REF: ${{ matrix.cache-ref }}
         with:
           script: |
             const key_prefix = 'cygwin-install-action-packages-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}-';
@@ -441,21 +402,6 @@ jobs:
               key: key_prefix
             });
             core.info(`Found ${response.data.total_count} caches`);
-            if ((process.env.ADD_TO_PATH == 'true') &&
-                (process.env.CACHE_REF == 'v3')) {
-              if (response.data.total_count == 1) {
-                core.notice(
-                  'Cache creation unfortunately failed, as expected',
-                  {title: 'Cache creation failed'}
-                );
-              } else if (response.data.total_count == 2) {
-                core.warning(
-                  'Perhaps actions/cache#1073 has been fixed?',
-                  {title: 'Cache creation unexpectedly succeeded'}
-                );
-              } else {
-                core.setFailed(`Expected one or two cache entries, found ${response.data.total_count`);
-              }
-            } else if (response.data.total_count != 2) {
+            if (response.data.total_count != 2) {
               core.setFailed(`Expected two cache entries, found ${response.data.total_count}`);
             }

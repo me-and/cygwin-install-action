@@ -11,11 +11,6 @@ on:
         required: false
         type: string
         default: cygport
-      cache_ref:
-        description: Which cache action ref to use
-        required: false
-        type: string
-        default: v3
   workflow_call:
     inputs:
       packages:
@@ -23,16 +18,6 @@ on:
         required: false
         type: string
         default: cygport
-      cache_ref:
-        description: Which cache action ref to use
-        required: false
-        type: string
-        default: v3
-
-# This workflow can create very big caches.  To avoid that causing a problem
-# with parallel runs leading to caches being evicted, only permit one run of
-# this workflow at a time.
-concurrency: big-caches
 
 jobs:
   # This will populate the cache without using any pre-existing cache, so we
@@ -49,7 +34,6 @@ jobs:
         with:
           packages: ${{ inputs.packages }}
           cache: saveonly
-          cache-ref: ${{ inputs.cache_ref }}
 
   # Because the cache restore process will prefer caches from the same job,
   # this will always restore the cache created by the install-without-cache
@@ -67,4 +51,3 @@ jobs:
         with:
           packages: ${{ inputs.packages }}
           cache: restoreonly
-          cache-ref: ${{ inputs.cache_ref }}
