@@ -10,11 +10,6 @@ on:
   # don't want to put this on main yet, so make it run on pushes after all.
   - push
 
-# This workflow can create very big caches.  To avoid that causing a problem
-# with parallel runs leading to caches being evicted, only permit one run of
-# this workflow at a time.
-concurrency: big-caches
-
 jobs:
   test-perf-min:
     name: Run perf tests
@@ -29,6 +24,10 @@ jobs:
 
   test-perf-tex:
     name: Run perf tests
+    # This job will create very big caches.  To avoid that causing a problem
+    # with parallel runs leading to caches being evicted, only permit one run
+    # of this job at a time.
+    concurrency: big-caches
     uses: ./.github/workflows/cache-perf.yml
     with:
       # Approximately 4GB as of January 2023
