@@ -34,6 +34,30 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - shell: bash
+      run: env
+
+    - shell: bash
+      env:
+        CXT_GITHUB: ${{ toJSON(github) }}
+        CXT_ENV: ${{ toJSON(env) }}
+        CXT_VARS: ${{ toJSON(vars) }}
+        CXT_JOB: ${{ toJSON(job) }}
+        CXT_JOBS: ${{ toJSON(jobs) }}
+        CXT_STEPS: ${{ toJSON(steps) }}
+        CXT_RUNNER: ${{ toJSON(runner) }}
+        CXT_SECRETS: ${{ toJSON(secrets) }}
+        CXT_STRATEGY: ${{ toJSON(strategy) }}
+        CXT_MATRIX: ${{ toJSON(matrix) }}
+        CXT_NEEDS: ${{ toJSON(needs) }}
+        CXT_INPUTS: ${{ toJSON(inputs) }}
+      run: |
+        for v in CXT_{GITHUB,ENV,VARS,JOB,JOBS,STEPS,RUNNER,SECRETS,STRATEGY,MATRIX,NEEDS,INPUTS}; do
+          printf '::group::%s\n' "$v"
+          echo "${!v}" | jq .
+          printf '::endgroup::\n'
+        done
+
     # The caching action will use Git for Windows' tar if possible, but
     # whatever zstd or gzip it finds first in the PATH.  Git for Windows' tar
     # doesn't work when calling Cygwin's zstd or gzip, so hide those
