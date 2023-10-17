@@ -29,6 +29,10 @@ inputs:
     description: Should Cygwin's bin directory be added to the system PATH?
     required: false
     default: true
+  upgrade:
+    description: Should existing packages be upgraded?
+    required: false
+    default: true
 
 runs:
   using: "composite"
@@ -50,7 +54,7 @@ runs:
         $pkg_list = $pkg_list | % { $_.Trim(',') }
 
         $args = @(
-         '-qgnO',
+         '-qnO',
          '-l', 'C:\cygwin-packages',
          '-R', '${{ inputs.install-dir }}'
         )
@@ -77,6 +81,10 @@ runs:
 
         if ('${{ inputs.check-sig }}' -eq $false) {
           $args += '-X'
+        }
+
+        if ('${{ inputs.upgrade }}' -eq $true) {
+          $args += '-g'
         }
 
         if ( '${{ inputs.pubkeys }}' ) {
